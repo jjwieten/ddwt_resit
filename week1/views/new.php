@@ -34,6 +34,31 @@
                     <h5><?= $page_subtitle ?></h5>
                     <p><?= $page_content ?></p>
                     <!-- Put your form here -->
+                    <form action="/DDWT21/week1/add/" method="post">
+                        <div class="form-group row">
+                            <label for="inputName" class="col-sm-2 col-form-label">Name</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="inputName" name="Name" required>
+                            </div>
+                            <label for="inputAbstract" class="col-sm-2 col-form-label">Abstract</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="inputAbstract" name="Abstract" required>
+                            </div>
+                            <label for="inputCreator" class="col-sm-2 col-form-label">Creators</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="inputCreator" name="Creator" required>
+                            </div>
+                            <label for="inputSeasons" class="col-sm-2 col-form-label">Seasons</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id="inputSeries" name="Seasons" required>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-sm-10">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- Right column -->

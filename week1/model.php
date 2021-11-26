@@ -118,3 +118,136 @@ function get_error($feedback){
             '.$feedback['message'].'
         </div>';
 }
+
+function connect_db($host, $database, $username, $password){
+    $charset = 'utf8mb4';
+    $dsn = "mysql:host=$host;dbname=$database;charset=$charset";
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ];
+    try {
+        $pdo = new PDO($dsn, $username, $password, $options);
+    } catch (PDOException $e) {
+        echo sprintf("Failed to connect. %s",$e->getMessage());
+    }
+    return $pdo;
+}
+
+function count_series($pdo) {
+    $stmt = $pdo->prepare('SELECT * FROM series');
+    $stmt->execute();
+    return $stmt->rowCount();
+}
+
+function get_series($pdo) {
+    $stmt = $pdo->prepare('SELECT * from series');
+    $stmt->execute();
+    $series = $stmt->fetchAll();
+    $series_array = Array();
+    foreach ($series as $key => $value){
+        foreach ($value as $user_key => $user_input) {
+            $series_array[$key][$user_key] = htmlspecialchars($user_input);
+        }
+    }
+    return $series_array;
+}
+
+function get_series_table($array) {
+    $table = '
+    <table class="table table-hover">
+        <thead>
+        <tr>
+            <th scope="col">Series</th>
+            <th scope="col"></th>
+        </tr>
+        </thead>
+        <tbody>';
+        foreach($array as $key => $value){
+            $table .= '
+            <tr>
+            <th scope="row">'.$value['name'].'</th>
+            <td><a href="/DDWT21/week1/series/?series_id='.$value['id'].'" role="button" class="btn btn-primary">More info</a></td>
+            </tr>
+            ';
+}
+$table .= '
+</tbody>
+</table>
+';
+    return $table;
+}
+
+function get_series_info($pdo, $series_id) {
+    $stmt = $pdo->prepare('SELECT * FROM series WHERE id = ?');
+    $stmt->execute([$series_id]);
+    $series_info = $stmt->fetch();
+    $series_info_array = Array();
+    /* Create array with htmlspecialchars */
+    foreach ($series_info as $key => $value){
+        $series_info_array[$key] = htmlspecialchars($value);
+    }
+    return $series_info_array;
+}
+
+function add_series($pdo) {
+    $series_info = $_POST;
+    $stmt = $pdo->prepare('SELECT * FROM series WHERE name = ?');
+    $stmt->execute([$series_info['Name']]);
+    $serie = $stmt->rowCount();
+    /* Check if all fields are set */
+    if (
+        empty($series_info['Name']) or
+        empty($series_info['Creator']) or
+        empty($series_info['Seasons']) or
+        empty($series_info['Abstract']) or
+        (!is_numeric($series_info['Seasons'])) or
+        ($serie)
+) {
+        return [
+            'type' => 'danger',
+            'message' => 'Series wasn\'t added. There was an error.'
+        ];
+    }
+    else {
+        $stmt = $pdo->prepare("INSERT INTO series (name, creator, seasons, abstract) VALUES (?, ?, ?, ?)");
+        $stmt->execute([
+            $series_info['Name'],
+            $series_info['Creator'],
+            $series_info['Seasons'],
+            $series_info['Abstract']
+        ]);
+        return [
+            'type' => 'success',
+            'message' => 'Series was successfully added.'
+        ];
+    }
+}
+
+function update_series($pdo, $series_id) {
+    $series_info = $_POST;
+
+    $stmt = $pdo->prepare("UPDATE series SET name = ?, creator = ?, seasons = ?, abstract = ? WHERE id = ?");
+    $stmt->execute([
+        $series_info['Name'],
+        $series_info['Creator'],
+        $series_info['Seasons'],
+        $series_info['Abstract'],
+        $series_id
+    ]);
+
+    return True;
+
+    /*$stmt = $pdo->prepare('SELECT * FROM series WHERE ABSOLUTE name = ?');
+    $stmt->execute([$series_info['Name']]);
+    if (
+        empty($series_info['Name']) or
+        empty($series_info['Creator']) or
+        empty($series_info['Seasons']) or
+        empty($series_info['Abstract']) or
+        (!is_numeric($series_info['Seasons'])) or
+
+
+    $stmt = $pdo->prepare("UPDATE series SET name = ?, creator = ?, seasons = ?, abstract = ? WHERE id = ?");*/
+
+}
