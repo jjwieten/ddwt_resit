@@ -224,30 +224,36 @@ function add_series($pdo) {
     }
 }
 
-function update_series($pdo, $series_id) {
-    $series_info = $_POST;
-
+function update_series($pdo) {
+    $series_id = $_POST;
+    $series_info = get_series_info($pdo, $series_id);
+    if (
+        empty($series_info['Name']) or
+        empty($series_info['Creator']) or
+        empty($series_info['Seasons']) or
+        empty($series_info['Abstract']) or
+        (!is_numeric($series_info['Seasons']))) {
+            return [
+                'type' => 'danger',
+                'message' => 'Series wasn\'t updated. There was an error.'
+        ];
+    }
     $stmt = $pdo->prepare("UPDATE series SET name = ?, creator = ?, seasons = ?, abstract = ? WHERE id = ?");
     $stmt->execute([
         $series_info['Name'],
         $series_info['Creator'],
         $series_info['Seasons'],
         $series_info['Abstract'],
-        $series_id
-    ]);
+        $series_id]);
 
-    return True;
+    return $series_info;
+}
 
-    /*$stmt = $pdo->prepare('SELECT * FROM series WHERE ABSOLUTE name = ?');
-    $stmt->execute([$series_info['Name']]);
-    if (
-        empty($series_info['Name']) or
-        empty($series_info['Creator']) or
-        empty($series_info['Seasons']) or
-        empty($series_info['Abstract']) or
-        (!is_numeric($series_info['Seasons'])) or
-
-
-    $stmt = $pdo->prepare("UPDATE series SET name = ?, creator = ?, seasons = ?, abstract = ? WHERE id = ?");*/
-
+function remove_series($pdo, $series_id) {
+    $stmt = $pdo->prepare("DELETE FROM series WHERE id= ?");
+    $stmt->execute([$series_id]);
+    return [
+        'type' => 'success',
+        'message' => 'Series succesfully removed.'
+    ];
 }

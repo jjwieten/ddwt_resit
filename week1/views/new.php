@@ -34,7 +34,7 @@
                     <h5><?= $page_subtitle ?></h5>
                     <p><?= $page_content ?></p>
                     <!-- Put your form here -->
-                    <form action="/DDWT21/week1/add/" method="post">
+                    <form method="post"> <!-- action="/DDWT21/week1/add/" -->
                         <div class="form-group row">
                             <label for="inputName" class="col-sm-2 col-form-label">Name</label>
                             <div class="col-sm-10">
