@@ -216,7 +216,7 @@ elseif (new_route('/DDWT21/week1/edit/', 'post')) {
 elseif (new_route('/DDWT21/week1/remove/', 'post')) {
     /* Remove series in database */
     $series_id = $_POST['series_id'];
-    $feedback = remove_series($db, $series_id);
+    $feedback = remove_series($pdo, $series_id);
     $error_msg = get_error($feedback);
 
     /* Page info */
