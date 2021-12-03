@@ -97,11 +97,11 @@ function get_breadcrumbs($breadcrumbs) {
 
 /**
  * Creates navigation HTML code using given array
- * @param array $navigation Array with as Key the page name and as Value the corresponding URL
+ * @param array $template Array with as Key the page name and as Value the corresponding URL
  * @return string HTML code that represents the navigation
  */
-function get_navigation($navigation){
-    $navigation_exp = '
+function get_navigation($template, $active_id){
+    $template_exp = '
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <a class="navbar-brand">Series Overview</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -109,22 +109,22 @@ function get_navigation($navigation){
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
     <ul class="navbar-nav mr-auto">';
-    foreach ($navigation as $name => $info) {
-        if ($info[1]){
-            $navigation_exp .= '<li class="nav-item active">';
-            $navigation_exp .= '<a class="nav-link" href="'.$info[0].'">'.$name.'</a>';
+    foreach ($template as $page_index => $info) {
+        if ($page_index === $active_id){
+            $template_exp .= '<li class="nav-item active">';
+            $template_exp .= '<a class="nav-link" href="'.$info['url'].'">'.$info['name'].'</a>';
         }else{
-            $navigation_exp .= '<li class="nav-item">';
-            $navigation_exp .= '<a class="nav-link" href="'.$info[0].'">'.$name.'</a>';
+            $template_exp .= '<li class="nav-item">';
+            $template_exp .= '<a class="nav-link" href="'.$info['url'].'">'.$info['name'].'</a>';
         }
 
-        $navigation_exp .= '</li>';
+        $template_exp .= '</li>';
     }
-    $navigation_exp .= '
+    $template_exp .= '
     </ul>
     </div>
     </nav>';
-    return $navigation_exp;
+    return $template_exp;
 }
 
 /**
@@ -132,7 +132,7 @@ function get_navigation($navigation){
  * @param array $series Associative array of series
  * @return string
  */
-function get_series_table($series){
+function get_series_table($pdo, $series){
     $table_exp = '
     <table class="table table-hover">
     <thead
@@ -146,6 +146,7 @@ function get_series_table($series){
         $table_exp .= '
         <tr>
             <th scope="row">'.$value['name'].'</th>
+            <td>'.get_name($pdo, $value['id']).'</td>
             <td><a href="/DDWT21/week2/series/?series_id='.$value['id'].'" role="button" class="btn btn-primary">More info</a></td>
         </tr>
         ';
@@ -212,6 +213,7 @@ function get_series_info($pdo, $series_id){
  * @return string
  */
 function get_error($feedback){
+    $feedback = json_decode($feedback, True);
     $error_exp = '
         <div class="alert alert-'.$feedback['type'].'" role="alert">
             '.$feedback['message'].'
@@ -259,12 +261,13 @@ function add_series($pdo, $series_info){
     }
 
     /* Add Series */
-    $stmt = $pdo->prepare("INSERT INTO series (name, creator, seasons, abstract) VALUES (?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO series (name, creator, seasons, abstract, user) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([
         $series_info['Name'],
         $series_info['Creator'],
         $series_info['Seasons'],
-        $series_info['Abstract']
+        $series_info['Abstract'],
+        $_SESSION['user_id']
     ]);
     $inserted = $stmt->rowCount();
     if ($inserted ==  1) {
@@ -411,4 +414,141 @@ function get_user_id(){
     } else {
         return False;
     }
+}
+
+function get_name($pdo, $user_id) {
+    $stmt = $pdo->prepare('SELECT firstname, lastname FROM users WHERE id = ?');
+    $stmt->execute([$user_id]);
+    p_print($stmt);
+    $name_array = $stmt->fetch();
+    return sprintf("%s %s", $name_array['firstname'], $name_array['lastname']);
+}
+
+function count_users($pdo) {
+    $stmt = $pdo->prepare('SELECT * FROM users');
+    $stmt->execute();
+    $series = $stmt->rowCount();
+    return $series;
+}
+
+function register_user($pdo, $form_data)
+{
+    /* Check if all fields are entered */
+    if (
+        empty($form_data['username']) or
+        empty($form_data['password']) or
+        empty($form_data['firstname']) or
+        empty($form_data['lastname'])
+    ) {
+        return [
+            'type' => 'danger',
+            'message' => 'You should enter a username, password, first- and last name.'
+        ];
+    }
+    /* Check if user already exists */
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ?');
+        $stmt->execute([$form_data['username']]);
+        $user_exists = $stmt->rowCount();
+    } catch (PDOException $e) {
+        return [
+            'type' => 'danger',
+            'message' => sprintf('There was an error: %s', $e->getMessage())
+        ];
+    }
+    /* Return error message for existing username */
+    if (!empty($user_exists)) {
+        return [
+            'type' => 'danger',
+            'message' => 'The username you entered does already exists!'
+        ];
+    }
+    /* Hash password */
+    $password = password_hash($form_data['password'], PASSWORD_DEFAULT);
+    /* Save user to the database */
+    try {
+        $stmt = $pdo->prepare('INSERT INTO users (username, password, firstname, lastname) VALUES (?, ?, ?, ?)');
+        $stmt->execute([$form_data['username'], $password, $form_data['firstname'], $form_data['lastname']]);
+    } catch (PDOException $e) {
+        return [
+            'type' => 'danger',
+            'message' => sprintf('There was an error: %s', $e->getMessage())
+        ];
+    }
+    /* Login user */
+    $user_id = $pdo->lastInsertId();
+    session_start();
+    $_SESSION['user_id'] = $user_id;
+    return [
+        'type' => 'success',
+        'message' => sprintf('%s, your account was successfully created!', get_name($pdo, $_SESSION['user_id']))
+    ];
+}
+
+function login_user($pdo, $form_data)
+{
+    /* Check if all fields are set */
+    if (
+        empty($form_data['username']) or
+        empty($form_data['password'])
+    ) {
+        return [
+            'type' => 'danger',
+            'message' => 'You should enter a username and password.'
+        ];
+    }
+    /* Check if user exists */
+    try {
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE username = ?');
+        $stmt->execute([$form_data['username']]);
+        $user_info = $stmt->fetch();
+    } catch (PDOException $e) {
+        return [
+            'type' => 'danger',
+            'message' => sprintf('There was an error: %s', $e->getMessage())
+        ];
+    }
+    /* Return error message for wrong username */
+    if (empty($user_info)) {
+        return [
+            'type' => 'danger',
+            'message' => 'The username you entered does not exist!'
+        ];
+    }
+    /* Check password */
+    if (!password_verify($form_data['password'], $user_info['password'])) {
+        return [
+            'type' => 'danger',
+            'message' => 'The password you entered is incorrect!'
+        ];
+    } else {
+        session_start();
+        $_SESSION['user_id'] = $user_info['id'];
+        p_print($_SESSION['user_id']);
+        return [
+            'type' => 'success',
+            'message' => sprintf("%s, you were logged in successfully!",
+                get_name($pdo, $_SESSION['user_id']))
+        ];
+    }
+}
+
+function check_login(){
+    if($_SESSION['user_id']) {
+        return True;
+    }
+    else {
+        return False;
+    }
+}
+
+function logout_user(){
+    $_SESSION = array();
+    session_destroy();
+    $feedback = [
+        'type' => 'success',
+        'message' => 'You were logged out succesfully.'
+    ];
+    return $feedback;
+
 }
