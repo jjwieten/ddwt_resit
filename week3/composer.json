@@ -1,0 +1,15 @@
+{
+  "name": "jjwieten/ddwt21",
+  "description": "DDWT21 a3",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "jasper",
+      "email": "j.j.wieten@rug.com"
+    }
+  ],
+  "require": {
+    "bramus/router": "1.5"
+  }
+}

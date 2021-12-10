@@ -258,3 +258,45 @@ function redirect($location){
     header(sprintf('Location: %s', $location));
     die();
 }
+
+/**
+ *  Sets the HTTP Header to application/json
+ */
+function http_content_type() {
+    header('Content-Type: application/json');
+}
+
+/**
+ * Set credentials for authentication
+ * @param $username
+ * @param $password
+ * @return array
+ */
+function set_cred($username, $password) {
+    return [
+        'username'=> $username,
+        'password'=> $password
+    ];
+}
+
+/**
+ * Check user credentials against server credentials
+ * @param $cred array containing credentials
+ * @return bool representing succes of authentication
+ */
+function check_cred($cred){
+    if (!isset($_SERVER['PHP_AUTH_USER'])){
+        return False;
+    }
+    else {
+        if ($_SERVER['PHP_AUTH_USER'] != $cred['username']){
+            return False;
+        }
+        elseif ($_SERVER['PHP_AUTH_PW'] != $cred['password']){
+            return False;
+        }
+        else {
+            return True;
+        }
+    }
+}
